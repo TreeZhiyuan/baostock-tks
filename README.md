@@ -65,3 +65,39 @@ python -m stock_basic_info.trade_calendar --start-date 2026-09-01 --end-date 202
 ```
 
 同一日期重复执行时会更新 `is_trading_day`，不会产生重复记录。
+
+## 历史 A 股 K 线数据
+
+本任务调用 [获取历史 A 股 K 线数据](https://www.baostock.com/mainContent?file=stockKData.md) 的 `query_history_k_data_plus(code, fields, start_date, end_date, frequency, adjustflag)` 接口。支持的 `frequency` 为：`d` 日线、`w` 周线、`m` 月线、`5`/`15`/`30`/`60` 分钟线；`adjustflag` 为 `1` 后复权、`2` 前复权、`3` 不复权。日期范围两端均包含，未提供日期时使用 Baostock 接口默认范围。
+
+调用命令如下。默认一次请求七种周期；可以重复 `--frequency` 只请求指定周期，也可以重复 `--code` 批量保存证券。分钟线不支持指数代码。
+
+```powershell
+python -m stock_basic_info.history_k_data --code sh.600000 --start-date 2024-01-01 --end-date 2024-01-31
+python -m stock_basic_info.history_k_data --code sh.600000 --frequency d --frequency 5 --adjustflag 2
+python -m stock_basic_info.history_k_data --code sh.600000 --code sz.000001 --database .\duckdb\sharp_market.duckdb
+```
+
+接口客户端按周期选择对应字段：日线包含 `preclose`、`tradestatus`、`pctChg`、`peTTM`、`psTTM`、`pcfNcfTTM`、`pbMRQ`、`isST`；周/月线包含 `preclose`、`tradestatus`、`pctChg`、`peTTM`、`psTTM`、`pcfNcfTTM`、`pbMRQ`、`isST`；分钟线包含 `time` 并请求全部统一表字段。不同周期由接口不提供的字段转换为 `NULL`，并在一次登录会话中完成所选周期的查询；仓储模块负责初始化 DDL 和幂等写入。
+
+| DuckDB表 | 字段 | 说明 |
+| --- | --- | --- |
+| `history_k_data` | `trade_date` | 交易所行情日期，对应 API 的 `date` |
+| `history_k_data` | `trade_time` | 分钟线交易所时间，对应 API 的 `time`；日/周/月线为空字符串 |
+| `history_k_data` | `code` | 证券代码，如 `sh.600000` |
+| `history_k_data` | `frequency` | `d`、`w`、`m`、`5`、`15`、`30` 或 `60` |
+| `history_k_data` | `open`/`high`/`low`/`close` | 开盘、最高、最低、收盘价，人民币元 |
+| `history_k_data` | `preclose` | 前收盘价；周/月/分钟线没有此字段时为 `NULL` |
+| `history_k_data` | `volume` | 成交量，单位股；分钟线为时间范围内累计值 |
+| `history_k_data` | `amount` | 成交额，单位人民币元；分钟线为时间范围内累计值 |
+| `history_k_data` | `adjustflag` | 复权状态：1 后复权、2 前复权、3 不复权 |
+| `history_k_data` | `turn` | 换手率百分比；接口不返回时为 `NULL` |
+| `history_k_data` | `tradestatus` | 交易状态：1 正常交易、0 停牌；接口不返回时为 `NULL` |
+| `history_k_data` | `pct_chg` | 涨跌幅百分比，对应 API 的 `pctChg` |
+| `history_k_data` | `pe_ttm` | 滚动市盈率，对应 API 的 `peTTM` |
+| `history_k_data` | `ps_ttm` | 滚动市销率，对应 API 的 `psTTM` |
+| `history_k_data` | `pcf_ncf_ttm` | 滚动市现率，对应 API 的 `pcfNcfTTM` |
+| `history_k_data` | `pb_mrq` | 市净率，对应 API 的 `pbMRQ` |
+| `history_k_data` | `is_st` | 是否 ST：1 是、0 否，对应 API 的 `isST` |
+
+表的唯一键为 `code + frequency + adjustflag + trade_date + trade_time`，同一请求重复运行会更新对应 K 线。表结构和表、字段注释见 [`duckdb/ddl/history_k_data.sql`](duckdb/ddl/history_k_data.sql)。
