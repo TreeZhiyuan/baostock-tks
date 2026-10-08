@@ -1,6 +1,7 @@
 # baostock-tks
 
-从 [Baostock](https://www.baostock.com/) 拉取沪深证券数据，并保存到项目根目录的 `./duckdb/sharp_market.duckdb`。
+从 [Baostock](https://www.baostock.com/) 拉取沪深证券数据保存到项目根目录duckdb文件 `./duckdb/sharp_market.duckdb`。
+如果数据并不是实时的可自行调用相关接口刷新duckdb（后续是否包含其他市场股票证券信息待定）
 
 ## 证券基础信息
 
