@@ -1,0 +1,1 @@
+"""Baostock data ingestion jobs."""
