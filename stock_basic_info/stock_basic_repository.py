@@ -7,9 +7,7 @@ from typing import Any, Iterable
 
 import duckdb
 
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DATABASE = PROJECT_ROOT / "duckdb" / "sharp_market.duckdb"
+from stock_basic_info.database import DEFAULT_DATABASE, PROJECT_ROOT
 DDL_FILE = PROJECT_ROOT / "duckdb" / "ddl" / "stock_basic_info.sql"
 
 

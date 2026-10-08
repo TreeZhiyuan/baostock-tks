@@ -7,10 +7,8 @@ from datetime import date
 from pathlib import Path
 
 from stock_basic_info.baostock_client import fetch_all_stock
-from stock_basic_info.stock_basic_repository import (
-    DEFAULT_DATABASE,
-    save_stock_basic_info,
-)
+from stock_basic_info.database import DEFAULT_DATABASE
+from stock_basic_info.stock_basic_repository import save_stock_basic_info
 
 
 def main() -> None:
@@ -29,11 +27,23 @@ def main() -> None:
         default=DEFAULT_DATABASE,
         help=f"DuckDB file (default: {DEFAULT_DATABASE})",
     )
+    parser.add_argument(
+        "--retries",
+        type=int,
+        default=3,
+        help="login retries when the Baostock connection fails (default: 3)",
+    )
     args = parser.parse_args()
 
-    records = fetch_all_stock(args.date)
+    try:
+        records = fetch_all_stock(args.date, login_retries=args.retries)
+    except RuntimeError as error:
+        parser.exit(1, f"错误：{error}\n")
+
     count = save_stock_basic_info(records, args.database)
-    print(f"Saved {count} securities for {args.date.isoformat()} to {args.database}")
+    print(
+        f"Saved {count} securities for {args.date.isoformat()} to {args.database}"
+    )
 
 
 if __name__ == "__main__":
